@@ -38,9 +38,13 @@ Testado com:
 ## 📁 Estrutura do Projeto
 .
 ├── selecao_espacial.py      # Script principal
+
 ├── exemplo/                 # Dados de demonstração
+
 │   ├── pontos_teste.shp
+
 │   └── areas_referencia.shp
+
 └── README.md
 
 ## 🛠️ Tecnologias
