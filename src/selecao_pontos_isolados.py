@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QVariant
 from qgis.core import (QgsProcessing, QgsProcessingAlgorithm, 
                        QgsProcessingParameterVectorLayer,
                        QgsProcessingParameterNumber,
@@ -9,23 +9,18 @@ from qgis.core import (QgsProcessing, QgsProcessingAlgorithm,
                        QgsFeatureSink, QgsFeature, QgsField, QgsFields,
                        QgsSpatialIndex, QgsDistanceArea, QgsProject,
                        QgsCoordinateTransform, QgsCoordinateReferenceSystem,
-                       QgsWkbTypes, QgsGeometry, QgsPointXY)
-
-import math
+                       QgsWkbTypes, QgsGeometry)
 
 
 class SelecaoPontosIsolados(QgsProcessingAlgorithm):
     """
     Algoritmo para selecionar pontos isolados utilizando Spatial Index
-    e criar camada de saída padronizada (Progeo) em EPSG:4326.
+    e criar camada de saída padronizada em EPSG:4326.
     """
 
-    # Parâmetros de entrada
     CAMADA_BUSCA = 'CAMADA_BUSCA'
     CAMADA_REFERENCIA = 'CAMADA_REFERENCIA'
     RAIO = 'RAIO'
-    
-    # Parâmetros de saída
     CRIAR_CAMADA = 'CRIAR_CAMADA'
     CAMADA_SAIDA = 'CAMADA_SAIDA'
 
@@ -45,12 +40,11 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
         Diferenciais:
         • Usa Spatial Index (R-Tree) para alta performance
         • Cálculo geodésico preciso em metros (QgsDistanceArea)
-        • Saída padronizada em WGS84 (EPSG:4326) - padrão Progeo
+        • Saída padronizada em WGS84 (EPSG:4326)
         • Case-insensitive para nomes de campos
         """
 
     def initAlgorithm(self, config=None):
-        # Camada de busca (pontos a verificar)
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 self.CAMADA_BUSCA,
@@ -59,7 +53,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             )
         )
 
-        # Camada de referência (pontos de comparação)
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 self.CAMADA_REFERENCIA,
@@ -68,7 +61,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             )
         )
 
-        # Raio de busca em metros
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.RAIO,
@@ -79,7 +71,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             )
         )
 
-        # Opção de criar camada de saída
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.CRIAR_CAMADA,
@@ -88,17 +79,15 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             )
         )
 
-        # Saída da camada (opcional, será memory se não especificado)
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.CAMADA_SAIDA,
-                'Camada de pontos isolados (padrão Progeo - WGS84)',
+                'Camada de pontos isolados (WGS84)',
                 optional=True
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        # Obter parâmetros
         camada_busca = self.parameterAsVectorLayer(parameters, self.CAMADA_BUSCA, context)
         camada_ref = self.parameterAsVectorLayer(parameters, self.CAMADA_REFERENCIA, context)
         raio = self.parameterAsDouble(parameters, self.RAIO, context)
@@ -107,17 +96,14 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        # Configurar cálculo de distância geodésica
         dist_area = QgsDistanceArea()
         dist_area.setSourceCrs(camada_busca.sourceCrs(), context.transformContext())
         dist_area.setEllipsoid(QgsProject.instance().ellipsoid())
 
         feedback.pushInfo(f"Usando elipsoide: {QgsProject.instance().ellipsoid()}")
 
-        # CRS de saída padrão: EPSG:4326 (WGS 84)
         crs_wgs84 = QgsCoordinateReferenceSystem('EPSG:4326')
         
-        # Preparar transformação se necessário (para extrair lat/long corretos)
         transform_to_wgs84 = None
         if camada_busca.sourceCrs() != crs_wgs84:
             transform_to_wgs84 = QgsCoordinateTransform(
@@ -127,20 +113,16 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             )
             feedback.pushInfo(f"Transformando coordenadas de {camada_busca.sourceCrs().authid()} para EPSG:4326")
 
-        # Criar Spatial Index na camada de referência
         feedback.pushInfo("Criando índice espacial...")
         spatial_index = QgsSpatialIndex(camada_ref.getFeatures())
 
         if feedback.isCanceled():
             return {}
 
-        # Preparar camada de saída se necessário
         sink = None
         camada_saida_id = None
         
         if criar_camada:
-            # CORREÇÃO: Verificação de campos obrigatórios apenas se for criar camada
-            # Converter tudo para minúsculo para comparação case-insensitive
             campos_obrigatorios = ['município', 'mslink_pg', 'barramento']
             campos_existentes = [f.name().lower() for f in camada_busca.fields()]
             
@@ -150,7 +132,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
                     f"Campos obrigatórios não encontrados na camada de busca: {', '.join(campos_faltantes)}"
                 )
 
-            # Criar QgsFields em vez de lista
             fields_saida = QgsFields()
             fields_saida.append(QgsField('município', QVariant.String))
             fields_saida.append(QgsField('mslink_pg', QVariant.String))
@@ -159,7 +140,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             fields_saida.append(QgsField('long', QVariant.Double))
             fields_saida.append(QgsField('Propriedade', QVariant.String))
 
-            # Criar sink SEMPRE em EPSG:4326
             (sink, camada_saida_id) = self.parameterAsSink(
                 parameters,
                 self.CAMADA_SAIDA,
@@ -172,14 +152,12 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
             if sink is None:
                 raise Exception("Não foi possível criar a camada de saída")
 
-        # Processar pontos
         total = camada_busca.featureCount()
         feedback.pushInfo(f"Processando {total} feições...")
 
         pontos_isolados = []
         pontos_saida = []
 
-        # Deselecionar tudo inicialmente
         camada_busca.removeSelection()
 
         for current, feature in enumerate(camada_busca.getFeatures()):
@@ -194,7 +172,6 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
 
             ponto = geom.asPoint()
             
-            # Busca rápida via BBOX no Spatial Index (buffer do raio)
             if camada_ref.sourceCrs().isGeographic():
                 raio_graus = raio / 111000.0
             else:
@@ -231,15 +208,12 @@ class SelecaoPontosIsolados(QgsProcessingAlgorithm):
                 if criar_camada and sink is not None:
                     feat_saida = QgsFeature()
                     
-                    # CORREÇÃO: Buscar campos de forma case-insensitive
-                    # Criar dicionário com nomes em minúsculo
                     atributos_lower = {k.lower(): v for k, v in feature.attributeMap().items()}
                     
                     município = atributos_lower.get('município')
                     mslink_pg = atributos_lower.get('mslink_pg')
                     barramento = atributos_lower.get('barramento')
                     
-                    # Obter geometria em WGS84 para lat/long corretos
                     geom_wgs84 = QgsGeometry(geom)
                     if transform_to_wgs84:
                         geom_wgs84.transform(transform_to_wgs84)
