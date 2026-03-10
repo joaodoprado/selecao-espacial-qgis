@@ -7,7 +7,7 @@
 &gt; Algoritmo de processamento customizado para QGIS que automatiza a identificação 
 &gt; de feições pontuais isoladas utilizando Spatial Index (R-Tree) e cálculos 
 &gt; geodésicos precisos.
-
+ 
 ![Interface](docs/IMAGENS/interface_tool.png)
 
 ## 🚀 Diferenciais Técnicos
