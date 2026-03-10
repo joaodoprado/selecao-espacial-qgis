@@ -11,6 +11,10 @@ geodésicos precisos.
 Desenvolvido para otimizar workflows de análise espacial, reduzindo tarefas 
 que demandavam horas para segundos.
 
+## 📸 Interface da Ferramenta
+
+<img src="./docs/IMAGENS/interface_tool.png" alt="Interface da ferramenta no QGIS" width="776">
+
 ## 🚀 Diferenciais Técnicos
 
 | Recurso | Benefício |
