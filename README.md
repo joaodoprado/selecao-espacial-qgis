@@ -18,7 +18,8 @@ Para sair do "básico", este script foi construído com foco em dois pilares:
 4. A ferramenta aparecerá no grupo "Meus Scripts de Automação".
 
 ## 📸 Interface da Ferramenta
-<img width="773" height="549" alt="image" src="https://github.com/user-attachments/assets/11567129-8154-4092-9c33-17e01581c330" />
+<img width="776" height="548" alt="image" src="https://github.com/user-attachments/assets/03ca9e1d-bbb8-447f-8561-01d3e2ffcb22" />
+
 
 
 
